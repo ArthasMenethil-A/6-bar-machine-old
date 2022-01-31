@@ -1,0 +1,158 @@
+
+
+% coded with matlab 
+
+% ============= the calculations from kinematics ===============
+theta1 = linspace(0, 2*pi, 100); %linspace(0.05, 2*pi, 100);
+r1 = 225.4;
+r4 = 296;
+syms x
+[theta2(x), theta2_dot(x), theta2_ddot(x)] = theta2_function();
+[r2(x), r2_dot(x), r2ddot(x)] = r2_function();
+[r3(x), r3_dot(x), r3_ddot(x)] = r3_function();
+[r5(x), r5_dot(x), d5_ddot(x)] = r5_function();
+r6 = 260;
+
+[a4x(x), a4y(x)] = a4_function();
+[~, ~, alpha4(x)] = theta2_function();
+
+% ================== kinetic initilization =====================
+
+syms F23x F23y tau2 F34y F46x F46y F45y F12x F12y F16
+
+m = 0.3;
+ro = 10^(-3);
+moo = 0.25;
+
+tau2_finalVector = zeros(1, 100);
+F16_finalVector = zeros(1, 100);
+F46x_finalVector = zeros(1, 100);
+F46y_finalVector = zeros(1, 100);
+F45x_finalVector = zeros(1, 100);
+F45y_finalVector = zeros(1, 100);
+
+
+I2 = double((1/12)*ro*r1^3);
+alpha2 = 0;
+a6x = 0;
+
+% ============ loop of solving the system of equations ==========
+for t = 1:100
+    
+    % ################ non-variable elements ################
+    
+    
+    I4 = double((1/12)*ro*(abs(r5(theta1(t))) + abs(r2(theta1(t))))^3);
+
+    a2x = (r1/2)*cos(theta1(t));
+    a2y = (r1/2)*sin(theta1(t));
+    r12x = abs(r1/2*cos(theta1(t)));
+    r12y = abs(r1/2*sin(theta1(t)));
+    r23x = abs(r1/2*cos(theta1(t)));
+    r23y = abs(r1/2*sin(theta1(t)));
+
+    
+    a3x = a2x*2;
+    a3y = a2y*2;
+
+    
+
+    r46x = abs(557.7*cos(theta2(theta1(t))));
+    r46y = abs(557.7*sin(theta2(theta1(t))));
+
+    r34x = abs((r2(theta1(t)) - 557.7)*cos(theta2(theta1(t))));
+    r34y = abs((r2(theta1(t)) - 557.7)*sin(theta2(theta1(t))));
+
+    r45x = abs(( abs(r5(theta1(t))) + abs(r2(theta1(t))) - 557.7 )*cos(theta2(theta1(t))));
+    r45y = abs(( abs(r5(theta1(t))) + abs(r2(theta1(t))) - 557.7 )*sin(theta2(theta1(t))));
+
+    
+
+    
+    a6y = r3_ddot(theta1(t));
+
+    % ############### system of equations #####################
+
+    eqn1 = F23x - F12x == m*a2x;
+    eqn2 = -F23y + F12y == m*a2y;
+    eqn3 = tau2 - F12x*r12y - F12y*r12x - F23x*r23y - F23y*r23x == I2*alpha2;
+    eqn4 = -F23x + F34y*tan(theta2(theta1(t))) == m*a3x;
+    eqn5 = F23y - F34y == m*a3y;
+    eqn6 = F46x - F34y*tan(theta2(theta1(t))) + F45y*tan(theta2(theta1(t))) == m*a4x(theta1(t));
+    eqn7 = -F46y + F34y - F45y == m*a4y(theta1(t));
+    eqn8 = -F46x*r46y + F46y*r46x - F34y*tan(theta2(theta1(t)))*r34y + F34y*r34x + F45y*tan(theta2(theta1(t)))*r45y - F45y*r45x == I4*alpha4(theta1(t));
+    eqn9 = F16 - F46x == m*a6x;
+    eqn10 = -moo*F16 + F46y == m*a6y;
+
+    [temp1, temp2] = equationsToMatrix([eqn1, eqn2, eqn3, eqn4, eqn5, eqn6, eqn7, eqn8, eqn9, eqn10], [F23x, F23y, tau2, F34y, F46x, F46y, F45y, F12x, F12y, F16]);
+    answers = double(linsolve(temp1, temp2));    % 
+    
+%     tau2_finalVector(t) = answers(3);
+    F16_finalVector(t) = answers(10);
+    F46x_finalVector(t) = answers(5);
+    F46y_finalVector(t) = answers(6);
+%     F45x_finalVector(t) = -answers(7)*tan(theta2(theta1(t)));
+    F45y_finalVector(t) = answers(7);
+    
+    t
+    
+end
+% plot(theta1, tau2_finalVector);
+plot(theta1, F16_finalVector);
+
+plot(theta1, F46x_finalVector);
+plot(theta1, F46y_finalVector);
+plot(theta1, (F46x_finalVector.^2 + F46y_finalVector.^2).^0.5);
+
+% plot(theta1, F45x_finalVector);
+plot(theta1, F45y_finalVector);
+% plot(theta1, (F45x_finalVector.^2 + F45y_finalVector.^2).^0.5);
+
+
+% functions of kinematic elements
+
+function [output, output_dot, output_ddot] = theta2_function()
+    syms x
+    output(x) = atan((225.4*sin(x))/(260 - 225.4*cos(x)));
+    output_dot(x) = diff(output(x));
+    output_ddot(x) = diff(output_dot(x));
+end
+
+function [output, output_dot, output_ddot] = r5_function()
+    syms x 
+    [theta2_v(x), ~, ~] = theta2_function();
+    output(x) = -225.4*sin(x)/sin(theta2_v(x));
+    output_dot(x) = diff(output(x));
+    output_ddot(x) = diff(output_dot(x));
+end
+
+function [output, output_dot, output_ddot] = r2_function()
+    syms x
+    [theta2_v(x), ~, ~] = theta2_function();
+    output(x) = -(296 + 225.4*cos(x))/cos(theta2_v(x));
+    output_dot(x) = diff(output(x));
+    output_ddot(x) = diff(output_dot(x));
+end
+
+function [output, output_dot, output_ddot] = r3_function()
+    syms x
+    [r2_v(x), ~, ~] = r2_function();
+    [theta2_v(x), ~, ~] = theta2_function();
+    output(x) = r2_v(x)*sin(theta2_v(x)) + 225.4*sin(x);
+    output_dot(x) = diff(output(x));
+    output_ddot(x) = diff(output_dot(x));
+    
+end
+
+function [a4x, a4y] = a4_function()
+    syms x
+    [r2_v(x), ~, ~] = r2_function();
+    [theta2_v(x), ~, ~] = theta2_function();
+    
+    R_G4_x(x) = 225.4*cos(x) + (r2_v(x) - 557.7)*cos(theta2_v(x));
+    R_G4_y(x) = 225.4*sin(x) + (r2_v(x) - 557.7)*sin(theta2_v(x));
+    
+    a4x(x) = diff(diff(R_G4_x));
+    a4y(x) = diff(diff(R_G4_y));
+    
+end
